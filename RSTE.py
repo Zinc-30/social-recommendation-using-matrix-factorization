@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as sp
+import time
 
 def RSTE(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
     def sigmoid(z):
@@ -53,6 +54,7 @@ def RSTE(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
         momentum = 0.9
         stage = max(steps/100 , 1)
         for step in xrange(steps):
+            start = time.time()
             dU,dV = gradient(U,V)
             dU = dU + momentum*pregradU
             dV = dV + momentum*pregradV
@@ -65,7 +67,7 @@ def RSTE(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
             e = costL(U,V)
             res.append(e)
             if not step%(stage*5):
-                print step,e
+                print step,e,time.time()-start
             if step>100 and abs(sum(res[-3:])-sum(res[-13:-10]))<tol:
                 print "====================" 
                 print "stop in %d step"%(step)
@@ -127,9 +129,9 @@ def t_yelp(limitu,limiti):
         #         C[ci].append(i)
         return R,T,N,M,R_test,ul,il
     R,T,N,M,R_test,ul,il = getdata()
-    lambdaU,lambdaV,lambdaT,K = 0.2, 0.2, 0.4, 4
+    lambdaU,lambdaV,lambdaT,K = 0.01, 0.01, 0.01, 5
     RSTE(R,T,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il)
 
 if __name__ == "__main__":
 #   t_epinion()
-   t_yelp(100,2000)
+   t_yelp(1000,20000)
