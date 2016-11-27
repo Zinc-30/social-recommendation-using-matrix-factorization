@@ -19,7 +19,7 @@ def socialMF(R,S,C,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
         error = abs(get_csrmat(sigmoid(U.dot(V.T)),utl,itl)-R).sum()/R.nnz
         return error
     def get_csrmat(mat,ul,il):
-        indx = ul*mat.shape[0]+il
+        indx = ul*mat.shape[1]+il
         return sp.csr_matrix((np.take(np.array(mat),indx),(ul,il)),shape=(N,M))
     def costL(U,V,Sc):
         tmp = U.dot(V.T)

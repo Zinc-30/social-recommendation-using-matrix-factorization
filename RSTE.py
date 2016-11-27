@@ -19,7 +19,7 @@ def RSTE(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
         error = abs(get_csrmat(sigmoid(U.dot(V.T)),utl,itl)-R).sum()/R.nnz
         return error
     def get_csrmat(mat,ul,il):
-        indx = ul*mat.shape[0]+il
+        indx = ul*mat.shape[1]+il
         return sp.csr_matrix((np.take(np.array(mat),indx),(ul,il)),shape=(N,M))
     def costL(U,V):
         tmp = lambdaT*U.dot(V.T)+(1-lambdaT)*S.dot((U.dot(V.T)))
@@ -64,7 +64,7 @@ def RSTE(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
             V -= rate * dV
             e = costL(U,V)
             res.append(e)
-            if not step%stage:
+            if not step%(stage*5):
                 print step,e
             if step>100 and abs(sum(res[-3:])-sum(res[-13:-10]))<tol:
                 print "====================" 
@@ -127,7 +127,7 @@ def t_yelp(limitu,limiti):
         #         C[ci].append(i)
         return R,T,N,M,R_test,ul,il
     R,T,N,M,R_test,ul,il = getdata()
-    lambdaU,lambdaV,lambdaT,K = 1, 1, 0.4, 2
+    lambdaU,lambdaV,lambdaT,K = 0.2, 0.2, 0.4, 4
     RSTE(R,T,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il)
 
 if __name__ == "__main__":

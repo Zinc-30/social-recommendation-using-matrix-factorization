@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as sp
+import time
 
 def socialMF(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
     def sigmoid(z):
@@ -19,7 +20,7 @@ def socialMF(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
         error = abs(get_csrmat(sigmoid(U.dot(V.T)),utl,itl)-R).sum()/R.nnz
         return error
     def get_csrmat(mat,ul,il):
-        indx = ul*mat.shape[0]+il
+        indx = ul*mat.shape[1]+il
         return sp.csr_matrix((np.take(np.array(mat),indx),(ul,il)),shape=(N,M))
     def costL(U,V):
         tmp = U.dot(V.T)
@@ -28,6 +29,8 @@ def socialMF(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
         cost += 0.5*lambdaT*np.power(U-S.dot(U),2).sum()
         return cost
     def gradient(U,V):
+        dU = np.zeros(U.shape)
+        dV = np.zeros(V.shape)
         dU = lambdaU*U
         tmp = U.dot(V.T)
         Rv = get_csrmat(dsigmoid(tmp),ul,il)
@@ -53,19 +56,20 @@ def socialMF(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
         momentum = 0.9
         stage = max(steps/100 , 1)
         for step in xrange(steps):
+            start = time.time()
             dU,dV = gradient(U,V)
             dU = dU + momentum*pregradU
             dV = dV + momentum*pregradV
             pregradU = dU
             pregradV = dV
-            if not step%stage and rate>0.0001:
+            if not step%stage and rate>0.001:
                 rate = 0.95*rate
             U -= rate * dU
             V -= rate * dV
             e = costL(U,V)
             res.append(e)
             if not step%stage:
-                print step,e
+                print step,e,time.time() - start
             if step>100 and abs(sum(res[-3:])-sum(res[-13:-10]))<tol:
                 print "====================" 
                 print "stop in %d step"%(step)
@@ -75,13 +79,17 @@ def socialMF(R,S,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il):
         return U, V
     U = np.random.normal(0,0.01,size=(N,K))
     V = np.random.normal(0,0.01,size=(M,K))
+    start = time.time()
     U,V = train(U,V)
     print "=================RESULT======================="
     print 'K:%d,lambdaU:%s, lambdaV:%s,lambdaT:%s' \
             %(K,lambdaU,lambdaV,lambdaT)
     print "rmse",rmse(U,V,R_test)
     print "mae",mae(U,V,R_test)
+    print "time",time.time() - start
     return 0
+
+
 def t_yelp(limitu,limiti):
     #data from: http://www.trustlet.org/wiki/Epinions_datasets
     def getdata():
@@ -127,9 +135,37 @@ def t_yelp(limitu,limiti):
         #         C[ci].append(i)
         return R,T,N,M,R_test,ul,il
     R,T,N,M,R_test,ul,il = getdata()
-    lambdaU,lambdaV,lambdaT,K = 1, 1, 0.4, 2
-    socialMF(R,T,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il)
 
+    lambdaU,lambdaV,lambdaT,K = 0.01, 0.01, 0.3, 5
+    socialMF(R,T,N,M,K,lambdaU,lambdaV,lambdaT,R_test,ul,il)
+def t_toy():
+    R0 = [
+         [5,3,0,1],
+         [4,0,0,1],
+         [1,1,0,5],
+         [1,0,0,4],
+         [0,1,5,4],
+        ]
+    max_r = 5.0
+    T0 = [[3,2],[1,3,4],[2],[1,5],[3]]
+    N,M,K=5,4,4
+    lambdaU,lambdaV,lambdaT=0.02, 0.02, 0.1
+
+    R=sp.dok_matrix((N,M))
+    T=sp.dok_matrix((N,N))
+    for i in xrange(len(R0)):
+        for j in xrange(len(R0[0])):
+            if R0[i][j]>0:
+                R[i,j]=1.0 * R0[i][j] / max_r
+    print R.toarray()
+    for i in xrange(len(T0)):
+        for j in T0[i]:
+            T[i,j-1]=1.0
+    print T.toarray()
+    keys = np.array(R.keys()).T
+    print keys
+    R,T = R.tocsr(),T.tocsr()
+    socialMF(R,T,N,M,K,lambdaU,lambdaV,lambdaT,R,np.array(keys[0]),np.array(keys[1]))
 if __name__ == "__main__":
-#   t_epinion()
-   t_yelp(100,2000)
+    # t_toy()
+    t_yelp(1000,20000)
